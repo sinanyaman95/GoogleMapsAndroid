@@ -11,6 +11,8 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.location.Address;
+import android.location.Geocoder;
 import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
@@ -44,9 +46,11 @@ import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
 import com.google.android.libraries.places.widget.model.AutocompleteActivityMode;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback,
         GoogleMap.OnMyLocationButtonClickListener, GoogleMap.OnMyLocationClickListener {
@@ -159,8 +163,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         return lastLatLng != null;
     }
 
-    private void findCurrentPlace(){
-        FindCurrentPlaceRequest findCurrentPlaceRequest = FindCurrentPlaceRequest
+    private void findCurrentPlace(LatLng latLng) {
+        /*FindCurrentPlaceRequest findCurrentPlaceRequest = FindCurrentPlaceRequest
                 .newInstance(Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.ADDRESS_COMPONENTS));
 
         Task<FindCurrentPlaceResponse> placeResponse = placesClient.findCurrentPlace(findCurrentPlaceRequest);
@@ -175,17 +179,27 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }else{
                 Toast.makeText(getApplicationContext(),"Error occured",Toast.LENGTH_SHORT).show();
             }
-        });
+        });*/
+
+        Geocoder geocoder = new Geocoder(getApplicationContext(), Locale.getDefault());
+        try {
+            List<Address> addresses = geocoder.getFromLocation(latLng.latitude, latLng.longitude, 1);
+            Address obj = addresses.get(0);
+            String addressLine = obj.getAddressLine(0);
+            goToLocation(null,addressLine,latLng);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
-    private void setMapListeners(){
+        private void setMapListeners(){
         mMap.setInfoWindowAdapter(new CustomInfoWindow(this));
 
         mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
             @Override
             public void onMapClick(LatLng latLng) {
-                findCurrentPlace();
-                goToLocation(null,"Location",latLng);
+                findCurrentPlace(latLng);
+                //goToLocation(null,"Location",latLng);
             }
         });
 
@@ -241,8 +255,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if(place != null){
             markerOptions.snippet(place.getAddress());
         }
-
-
         Marker m = mMap.addMarker(markerOptions);
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(position,5));
         resetMarker();
