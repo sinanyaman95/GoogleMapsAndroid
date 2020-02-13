@@ -1,5 +1,6 @@
 package com.humber.saynn.sinanmapsapp;
 
+import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
@@ -40,7 +41,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback,
+        GoogleMap.OnMyLocationButtonClickListener, GoogleMap.OnMyLocationClickListener {
 
     private GoogleMap mMap;
     private FusedLocationProviderClient fusedLocationProviderClient;
@@ -75,7 +77,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 getSupportFragmentManager().findFragmentById(R.id.autocomplete_fragment);
 
         //Change background of fragment
-        autocompleteFragment.getView().setBackgroundColor(Color.WHITE);
+        //autocompleteFragment.getView().setBackgroundColor(Color.WHITE);
 
         // Specify the types of place data to return.
         autocompleteFragment.setPlaceFields(Arrays.asList(Place.Field.ID, Place.Field.NAME,
@@ -166,6 +168,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 return false;
             }
         });
+        mMap.setMyLocationEnabled(true);
+        mMap.setOnMyLocationButtonClickListener(this);
+        mMap.setOnMyLocationClickListener(this);
+
+        mMap.setPadding(0,100,0,0);
     }
 
     /**
@@ -217,5 +224,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         oldMarkers.add(m);
         oldMarker = m;
         return m;
+    }
+
+    @Override
+    public boolean onMyLocationButtonClick() {
+        if(lastLatLng != null){
+            goToLocation("Your Location",lastLatLng);
+        }
+        return false;
+    }
+
+    @Override
+    public void onMyLocationClick(@NonNull Location location) {
+        Toast.makeText(this, "Current location:\n" + location, Toast.LENGTH_SHORT).show();
     }
 }
