@@ -1,6 +1,7 @@
 package com.humber.saynn.sinanmapsapp;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
@@ -26,10 +27,16 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.tasks.CancellationToken;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.libraries.places.api.Places;
+import com.google.android.libraries.places.api.model.AutocompleteSessionToken;
 import com.google.android.libraries.places.api.model.Place;
+import com.google.android.libraries.places.api.model.PlaceLikelihood;
+import com.google.android.libraries.places.api.net.FetchPlaceRequest;
+import com.google.android.libraries.places.api.net.FindCurrentPlaceRequest;
+import com.google.android.libraries.places.api.net.FindCurrentPlaceResponse;
 import com.google.android.libraries.places.api.net.PlacesClient;
 import com.google.android.libraries.places.widget.Autocomplete;
 import com.google.android.libraries.places.widget.AutocompleteActivity;
@@ -49,6 +56,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     LatLng lastLatLng = null;
     Marker oldMarker = null;
     ArrayList<Marker> oldMarkers = new ArrayList<>();
+    PlacesClient placesClient;
 
     private static final int AUTOCOMPLETE_REQUEST_CODE = 99;
 
@@ -59,7 +67,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         Places.initialize(getApplicationContext(), getApplicationContext().getString(R.string.api_key));
 
         // Create a new Places client instance
-        PlacesClient placesClient = Places.createClient(this);
+        placesClient = Places.createClient(this);
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
@@ -77,7 +85,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 getSupportFragmentManager().findFragmentById(R.id.autocomplete_fragment);
 
         //Change background of fragment
-        //autocompleteFragment.getView().setBackgroundColor(Color.WHITE);
+        autocompleteFragment.getView().setBackgroundColor(Color.WHITE);
 
         // Specify the types of place data to return.
         autocompleteFragment.setPlaceFields(Arrays.asList(Place.Field.ID, Place.Field.NAME,
@@ -88,7 +96,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void onPlaceSelected(Place place) {
                 // TODO: Get info about the selected place.
-                Log.i("sy", "Place: " + place.getName() + ", " + place.getLatLng());
                 // Set the fields to specify which types of place data to
                 // return after the user has made a selection.
                 List<Place.Field> fields = Arrays.asList(Place.Field.ID, Place.Field.NAME,
@@ -104,7 +111,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void onError(Status status) {
                 // TODO: Handle the error.
-                Log.i("sy", "An error occurred: " + status);
             }
         });
 
@@ -121,8 +127,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if (resultCode == RESULT_OK) {
             Place place = Autocomplete.getPlaceFromIntent(data);
             LatLng latLng = place.getLatLng();
-            mMap.addMarker(new MarkerOptions().position(latLng).title(place.getName()));
-            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 10));
+            goToLocation(place,place.getName(),latLng);
+
 
         } else if (resultCode == AutocompleteActivity.RESULT_ERROR) {
             // TODO: Handle the error.
@@ -153,26 +159,41 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         return lastLatLng != null;
     }
 
+    private void findCurrentPlace(){
+        FindCurrentPlaceRequest findCurrentPlaceRequest = FindCurrentPlaceRequest
+                .newInstance(Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.ADDRESS_COMPONENTS));
+
+        Task<FindCurrentPlaceResponse> placeResponse = placesClient.findCurrentPlace(findCurrentPlaceRequest);
+        placeResponse.addOnCompleteListener(task -> {
+            if(task.isSuccessful()){
+                FindCurrentPlaceResponse response = task.getResult();
+                for(PlaceLikelihood placeLikelihood : response.getPlaceLikelihoods()){
+                    Log.v("sy", String.format("Place '%s' has likelihood: %f",
+                            placeLikelihood.getPlace().getName(),
+                            placeLikelihood.getLikelihood()));
+                }
+            }else{
+                Toast.makeText(getApplicationContext(),"Error occured",Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
     private void setMapListeners(){
+        mMap.setInfoWindowAdapter(new CustomInfoWindow(this));
+
         mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
             @Override
             public void onMapClick(LatLng latLng) {
-                goToLocation("Location",latLng);
+                findCurrentPlace();
+                goToLocation(null,"Location",latLng);
             }
         });
 
-        mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
-            @Override
-            public boolean onMarkerClick(Marker marker) {
-                Toast.makeText(getApplicationContext(),"YEY",Toast.LENGTH_SHORT).show();
-                return false;
-            }
-        });
         mMap.setMyLocationEnabled(true);
         mMap.setOnMyLocationButtonClickListener(this);
         mMap.setOnMyLocationClickListener(this);
 
-        mMap.setPadding(0,100,0,0);
+        mMap.setPadding(0,180,0,0);
     }
 
     /**
@@ -190,10 +211,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         setMapListeners();
         // Add a marker in Sydney and move the camera
         if(lastLatLng != null){
-            goToLocation("Your Location",lastLatLng);
+            goToLocation(null,"Your Location",lastLatLng);
         } else {
             LatLng sidney = new LatLng(-33.8, 151);
-            goToLocation("Marker in Sidney",sidney);
+            goToLocation(null,"Marker in Sidney",sidney);
         }
     }
 
@@ -211,15 +232,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
-    private Marker goToLocation(String title, LatLng position){
+    private Marker goToLocation(Place place, String title, LatLng position){
         MarkerOptions markerOptions = new MarkerOptions();
         markerOptions.title(title);
         markerOptions.draggable(true);
         markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE));
         markerOptions.position(position);
+        if(place != null){
+            markerOptions.snippet(place.getAddress());
+        }
+
 
         Marker m = mMap.addMarker(markerOptions);
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(position));
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(position,5));
         resetMarker();
         oldMarkers.add(m);
         oldMarker = m;
@@ -229,7 +254,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public boolean onMyLocationButtonClick() {
         if(lastLatLng != null){
-            goToLocation("Your Location",lastLatLng);
+            goToLocation(null,"Your Location",lastLatLng);
         }
         return false;
     }
