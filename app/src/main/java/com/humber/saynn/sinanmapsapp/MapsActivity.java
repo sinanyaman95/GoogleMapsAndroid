@@ -21,6 +21,7 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
@@ -44,6 +45,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private GoogleMap mMap;
     private FusedLocationProviderClient fusedLocationProviderClient;
     LatLng lastLatLng = null;
+    Marker oldMarker = null;
+    ArrayList<Marker> oldMarkers = new ArrayList<>();
 
     private static final int AUTOCOMPLETE_REQUEST_CODE = 99;
 
@@ -152,8 +155,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
             @Override
             public void onMapClick(LatLng latLng) {
-                mMap.addMarker(new MarkerOptions().position(latLng));
-                mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
+                goToLocation("Location",latLng);
             }
         });
 
@@ -181,14 +183,39 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         setMapListeners();
         // Add a marker in Sydney and move the camera
         if(lastLatLng != null){
-            mMap.addMarker(new MarkerOptions().position(lastLatLng).title("Your Location"));
-            mMap.moveCamera(CameraUpdateFactory.newLatLng(lastLatLng));
+            goToLocation("Your Location",lastLatLng);
         } else {
             LatLng sidney = new LatLng(-33.8, 151);
-            mMap.addMarker(new MarkerOptions().position(sidney).title("Marker in Sydney"));
-            mMap.moveCamera(CameraUpdateFactory.newLatLng(sidney));
+            goToLocation("Marker in Sidney",sidney);
         }
+    }
 
+    private void resetMarker(){
+        if(oldMarker != null){
+            oldMarker.setVisible(true);
+            oldMarker = null;
+            removeOldMarkers();
+        }
+    }
 
+    private void removeOldMarkers() {
+        for(Marker m : oldMarkers){
+            m.remove();
+        }
+    }
+
+    private Marker goToLocation(String title, LatLng position){
+        MarkerOptions markerOptions = new MarkerOptions();
+        markerOptions.title(title);
+        markerOptions.draggable(true);
+        markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE));
+        markerOptions.position(position);
+
+        Marker m = mMap.addMarker(markerOptions);
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(position));
+        resetMarker();
+        oldMarkers.add(m);
+        oldMarker = m;
+        return m;
     }
 }
