@@ -1,12 +1,18 @@
 package com.humber.saynn.sinanmapsapp;
 
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
 
+import android.Manifest;
+import android.app.Activity;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -16,8 +22,10 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
 import com.google.android.libraries.places.api.Places;
 import com.google.android.libraries.places.api.model.Place;
 import com.google.android.libraries.places.api.net.PlacesClient;
@@ -27,6 +35,7 @@ import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
 import com.google.android.libraries.places.widget.model.AutocompleteActivityMode;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -52,6 +61,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         //Get fused location for device location
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+        getLastLocation();
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
@@ -77,7 +87,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 // Set the fields to specify which types of place data to
                 // return after the user has made a selection.
                 List<Place.Field> fields = Arrays.asList(Place.Field.ID, Place.Field.NAME,
-                        Place.Field.LAT_LNG,Place.Field.ADDRESS_COMPONENTS);
+                        Place.Field.LAT_LNG, Place.Field.ADDRESS_COMPONENTS);
 
                 // Start the autocomplete intent.
                 Intent intent = new Autocomplete.IntentBuilder(
@@ -94,6 +104,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         });
 
         mapFragment.getMapAsync(this);
+
+
     }
 
 
@@ -105,7 +117,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             Place place = Autocomplete.getPlaceFromIntent(data);
             LatLng latLng = place.getLatLng();
             mMap.addMarker(new MarkerOptions().position(latLng).title(place.getName()));
-            mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 10));
+
         } else if (resultCode == AutocompleteActivity.RESULT_ERROR) {
             // TODO: Handle the error.
             Status status = Autocomplete.getStatusFromIntent(data);
@@ -115,18 +128,43 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //}
     }
 
-    private LatLng getLastLocation() {
-        fusedLocationProviderClient.getLastLocation().addOnSuccessListener(this, new OnSuccessListener<Location>() {
+
+    private boolean getLastLocation() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{
+                    Manifest.permission.ACCESS_FINE_LOCATION}, 100);
+        }
+        Task<Location> task = fusedLocationProviderClient.getLastLocation();
+        task.addOnSuccessListener(new OnSuccessListener<Location>() {
             @Override
             public void onSuccess(Location location) {
-                if (location != null) {
-                    lastLatLng = new LatLng(location.getLatitude(), location.getLongitude());
+                if(location != null){
+                    lastLatLng = new LatLng(location.getLatitude(),location.getLongitude());
                 }
             }
         });
-        return lastLatLng;
+
+        return lastLatLng != null;
     }
 
+    private void setMapListeners(){
+        mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
+            @Override
+            public void onMapClick(LatLng latLng) {
+                mMap.addMarker(new MarkerOptions().position(latLng));
+                mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
+            }
+        });
+
+        mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
+            @Override
+            public boolean onMarkerClick(Marker marker) {
+                Toast.makeText(getApplicationContext(),"YEY",Toast.LENGTH_SHORT).show();
+                return false;
+            }
+        });
+    }
 
     /**
      * Manipulates the map once available.
@@ -140,14 +178,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-
+        setMapListeners();
         // Add a marker in Sydney and move the camera
-        LatLng deviceLocation = getLastLocation();
-        if (deviceLocation != null) {
-            mMap.addMarker(new MarkerOptions().position(deviceLocation).title("Your Location"));
-            mMap.moveCamera(CameraUpdateFactory.newLatLng(deviceLocation));
+        if(lastLatLng != null){
+            mMap.addMarker(new MarkerOptions().position(lastLatLng).title("Your Location"));
+            mMap.moveCamera(CameraUpdateFactory.newLatLng(lastLatLng));
         } else {
-            LatLng sidney = new LatLng(-35, 115);
+            LatLng sidney = new LatLng(-33.8, 151);
             mMap.addMarker(new MarkerOptions().position(sidney).title("Marker in Sydney"));
             mMap.moveCamera(CameraUpdateFactory.newLatLng(sidney));
         }
