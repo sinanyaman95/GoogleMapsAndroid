@@ -1,11 +1,13 @@
 package com.humber.saynn.sinanmapsapp;
 
 import androidx.fragment.app.FragmentActivity;
+
 import android.content.Intent;
 import android.graphics.Color;
 import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
+
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
@@ -24,6 +26,7 @@ import com.google.android.libraries.places.widget.AutocompleteActivity;
 import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
 import com.google.android.libraries.places.widget.model.AutocompleteActivityMode;
+
 import java.util.Arrays;
 import java.util.List;
 
@@ -33,7 +36,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private FusedLocationProviderClient fusedLocationProviderClient;
     LatLng lastLatLng = null;
 
-    private static final int AUTOCOMPLETE_REQUEST_CODE = 1;
+    private static final int AUTOCOMPLETE_REQUEST_CODE = 99;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,21 +65,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         autocompleteFragment.getView().setBackgroundColor(Color.WHITE);
 
         // Specify the types of place data to return.
-        autocompleteFragment.setPlaceFields(Arrays.asList(Place.Field.ID, Place.Field.NAME));
+        autocompleteFragment.setPlaceFields(Arrays.asList(Place.Field.ID, Place.Field.NAME,
+                Place.Field.LAT_LNG, Place.Field.ADDRESS_COMPONENTS));
 
         // Set up a PlaceSelectionListener to handle the response.
         autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
             @Override
             public void onPlaceSelected(Place place) {
                 // TODO: Get info about the selected place.
-                Log.i("sy", "Place: " + place.getName() + ", " + place.getId());
+                Log.i("sy", "Place: " + place.getName() + ", " + place.getLatLng());
                 // Set the fields to specify which types of place data to
                 // return after the user has made a selection.
-                List<Place.Field> fields = Arrays.asList(Place.Field.ID, Place.Field.NAME);
+                List<Place.Field> fields = Arrays.asList(Place.Field.ID, Place.Field.NAME,
+                        Place.Field.LAT_LNG,Place.Field.ADDRESS_COMPONENTS);
 
                 // Start the autocomplete intent.
                 Intent intent = new Autocomplete.IntentBuilder(
-                        AutocompleteActivityMode.FULLSCREEN, fields)
+                        AutocompleteActivityMode.OVERLAY, fields)
                         .build(MapsActivity.this);
                 startActivityForResult(intent, AUTOCOMPLETE_REQUEST_CODE);
             }
@@ -94,27 +99,28 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode,resultCode,data);
-        if (requestCode == AUTOCOMPLETE_REQUEST_CODE) {
-            if (resultCode == RESULT_OK) {
-                Place place = Autocomplete.getPlaceFromIntent(data);
-                Log.i("sy", "Place: " + place.getName() + ", " + place.getId());
-            } else if (resultCode == AutocompleteActivity.RESULT_ERROR) {
-                // TODO: Handle the error.
-                Status status = Autocomplete.getStatusFromIntent(data);
-                Log.i("sy", status.getStatusMessage());
-            } else if (resultCode == RESULT_CANCELED) {
-                // The user canceled the operation.
-            }
+        super.onActivityResult(requestCode, resultCode, data);
+        //if (requestCode == AUTOCOMPLETE_REQUEST_CODE) {
+        if (resultCode == RESULT_OK) {
+            Place place = Autocomplete.getPlaceFromIntent(data);
+            LatLng latLng = place.getLatLng();
+            mMap.addMarker(new MarkerOptions().position(latLng).title(place.getName()));
+            mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
+        } else if (resultCode == AutocompleteActivity.RESULT_ERROR) {
+            // TODO: Handle the error.
+            Status status = Autocomplete.getStatusFromIntent(data);
+        } else if (resultCode == RESULT_CANCELED) {
+            // The user canceled the operation.
         }
+        //}
     }
 
-    private LatLng getLastLocation(){
+    private LatLng getLastLocation() {
         fusedLocationProviderClient.getLastLocation().addOnSuccessListener(this, new OnSuccessListener<Location>() {
             @Override
             public void onSuccess(Location location) {
-                if(location != null){
-                    lastLatLng = new LatLng(location.getLatitude(),location.getLongitude());
+                if (location != null) {
+                    lastLatLng = new LatLng(location.getLatitude(), location.getLongitude());
                 }
             }
         });
@@ -137,11 +143,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         // Add a marker in Sydney and move the camera
         LatLng deviceLocation = getLastLocation();
-        if(deviceLocation != null){
+        if (deviceLocation != null) {
             mMap.addMarker(new MarkerOptions().position(deviceLocation).title("Your Location"));
             mMap.moveCamera(CameraUpdateFactory.newLatLng(deviceLocation));
-        }else{
-            LatLng sidney = new LatLng(-35,115);
+        } else {
+            LatLng sidney = new LatLng(-35, 115);
             mMap.addMarker(new MarkerOptions().position(sidney).title("Marker in Sydney"));
             mMap.moveCamera(CameraUpdateFactory.newLatLng(sidney));
         }
