@@ -42,6 +42,7 @@ public class ForecastAdapter extends RecyclerView.Adapter<ForecastAdapter.Foreca
         holder.forecastDescription.setText(w.getDescription());
         holder.forecastTemperature.setText(Double.toString(w.getTemperature()));
         holder.forecastFeels.setText(Double.toString(w.getFeelsLike()));
+        holder.forecastTime.setText(ShowWeatherWindow.dt);
 
 
     }

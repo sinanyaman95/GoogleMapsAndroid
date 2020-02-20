@@ -328,7 +328,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //if(weatherData != null) Toast.makeText(getApplicationContext(),weatherData.getTemperature()+"",Toast.LENGTH_SHORT).show();
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setMessage(marker.getTitle())
+        builder.setMessage(weatherData.getTemperature() + " Degrees & " + weatherData.getDescription())
                 .setPositiveButton("Show Forecast", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {

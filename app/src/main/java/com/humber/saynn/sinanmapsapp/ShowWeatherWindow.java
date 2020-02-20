@@ -41,7 +41,7 @@ public class ShowWeatherWindow extends AppCompatActivity {
     ArrayList<Weather> weatherList = new ArrayList<>();
     ForecastAdapter forecastAdapter;
     RecyclerView forecastRecycler;
-    private String dt;
+    public static String dt;
 
 
     @Override
