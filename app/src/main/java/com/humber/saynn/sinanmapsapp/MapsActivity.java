@@ -1,13 +1,10 @@
 package com.humber.saynn.sinanmapsapp;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
-
 import android.Manifest;
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -17,9 +14,13 @@ import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
 import android.os.Bundle;
-import android.util.Log;
 import android.widget.Toast;
-
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
@@ -31,23 +32,20 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.gms.tasks.CancellationToken;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.libraries.places.api.Places;
-import com.google.android.libraries.places.api.model.AutocompleteSessionToken;
 import com.google.android.libraries.places.api.model.Place;
-import com.google.android.libraries.places.api.model.PlaceLikelihood;
-import com.google.android.libraries.places.api.net.FetchPlaceRequest;
-import com.google.android.libraries.places.api.net.FindCurrentPlaceRequest;
-import com.google.android.libraries.places.api.net.FindCurrentPlaceResponse;
 import com.google.android.libraries.places.api.net.PlacesClient;
 import com.google.android.libraries.places.widget.Autocomplete;
 import com.google.android.libraries.places.widget.AutocompleteActivity;
 import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
 import com.google.android.libraries.places.widget.model.AutocompleteActivityMode;
-
+import com.squareup.picasso.Picasso;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -64,6 +62,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     Marker oldMarker = null;
     ArrayList<Marker> oldMarkers = new ArrayList<>();
     PlacesClient placesClient;
+    private Weather weatherData = null;
 
     private static final int AUTOCOMPLETE_REQUEST_CODE = 99;
 
@@ -251,6 +250,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private Marker goToLocation(Place place, String title, LatLng position){
+        getWeatherData(position);
         MarkerOptions markerOptions = new MarkerOptions();
         markerOptions.title(title);
         markerOptions.draggable(true);
@@ -268,6 +268,48 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         return m;
     }
 
+    private void getWeatherData(LatLng latlng){
+        String lat = latlng.latitude+"";
+        String lon = latlng.longitude+"";
+
+        String url = "https://api.openweathermap.org/data/2.5/weather?lat=" + lat + "&lon=" + lon + "&appid=f67cd720fbcdb97f7aa61d7da7eefcb1&units=metric";
+        //TODO add &units=metric
+        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest
+                (Request.Method.GET, url, null, new Response.Listener<JSONObject>() {
+
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        try {
+                            JSONObject main = response.getJSONObject("main");
+                            double temperature = main.getDouble("temp");
+                            double feelsLike = main.getDouble("feels_like");
+                            JSONArray weather = response.getJSONArray("weather");
+                            for(int i=0; i<weather.length(); i++){
+                                JSONObject object = weather.getJSONObject(i);
+                                String description = object.getString("description");
+                                String iconURL = object.getString("icon");
+                                Toast.makeText(getApplicationContext(),description,Toast.LENGTH_SHORT).show();
+                                //Picasso.get().load("https://openweathermap.org/img/wn/"+iconURL+"@2x.png").into(imageView);
+                                weatherData = new Weather(temperature,feelsLike,description,iconURL);
+                            }
+
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+
+                    }
+                }, new Response.ErrorListener() {
+
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        // TODO: Handle error
+                    }
+                });
+        // Access the RequestQueue through your singleton class.
+        RequestQueue queue = Volley.newRequestQueue(this);
+        queue.add(jsonObjectRequest);
+    }
+
     @Override
     public boolean onMyLocationButtonClick() {
         if(lastLatLng != null){
@@ -283,6 +325,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public void onInfoWindowClick(Marker marker) {
+        if(weatherData != null) Toast.makeText(getApplicationContext(),weatherData.getTemperature()+"",Toast.LENGTH_SHORT).show();
+
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setMessage(marker.getTitle())
                 .setPositiveButton("OK", new DialogInterface.OnClickListener() {
