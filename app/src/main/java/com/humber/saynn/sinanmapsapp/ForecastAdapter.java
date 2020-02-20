@@ -39,11 +39,16 @@ public class ForecastAdapter extends RecyclerView.Adapter<ForecastAdapter.Foreca
         Weather w = weathers.get(position);
 
         Picasso.get().load("https://openweathermap.org/img/wn/"+w.getIconURL()+"@2x.png").into(holder.forecastImage);
+        holder.forecastDescription.setText(w.getDescription());
+        holder.forecastTemperature.setText(Double.toString(w.getTemperature()));
+        holder.forecastFeels.setText(Double.toString(w.getFeelsLike()));
+
+
     }
 
     @Override
     public int getItemCount() {
-        return 0;
+        return weathers.size();
     }
 
     public class ForecastViewHolder extends RecyclerView.ViewHolder{

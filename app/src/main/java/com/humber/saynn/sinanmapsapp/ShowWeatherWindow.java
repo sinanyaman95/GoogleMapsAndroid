@@ -2,7 +2,10 @@ package com.humber.saynn.sinanmapsapp;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.widget.ImageView;
@@ -26,6 +29,8 @@ import java.util.ArrayList;
 
 public class ShowWeatherWindow extends AppCompatActivity {
 
+    boolean forecastCalled = false;
+
     CardView forecastCard;
     LinearLayout forecastLayout;
     ImageView forecastImage;
@@ -34,6 +39,8 @@ public class ShowWeatherWindow extends AppCompatActivity {
     TextView forecastFeels;
     TextView forecastTime;
     ArrayList<Weather> weatherList;
+    ForecastAdapter forecastAdapter;
+    RecyclerView forecastRecycler;
 
 
     @Override
@@ -52,7 +59,20 @@ public class ShowWeatherWindow extends AppCompatActivity {
 
         getWindow().setLayout(newWidth,newHeight);
 
+        forecastRecycler = findViewById(R.id.forecastRecycler);
+
+        Intent intent = getIntent();
+        double lat = intent.getDoubleExtra("lat",35.0);
+        double lon = intent.getDoubleExtra("lon", -131.9);
+        LatLng latLng = new LatLng(lat,lon);
         weatherList = new ArrayList<>();
+        forecastCalled = getForecastData(latLng);
+
+        if(forecastCalled){
+            forecastAdapter = new ForecastAdapter(this,weatherList);
+            forecastRecycler.setAdapter(forecastAdapter);
+            forecastRecycler.setLayoutManager(new LinearLayoutManager(this));
+        }
         //linkInteface();
 
 
@@ -70,7 +90,7 @@ public class ShowWeatherWindow extends AppCompatActivity {
 
     }
 
-    private void getForecastData(LatLng latlng){
+    private boolean getForecastData(LatLng latlng){
         String lat = latlng.latitude+"";
         String lon = latlng.longitude+"";
 
@@ -116,5 +136,6 @@ public class ShowWeatherWindow extends AppCompatActivity {
         // Access the RequestQueue through your singleton class.
         RequestQueue queue = Volley.newRequestQueue(this);
         queue.add(jsonObjectRequest);
+        return true;
     }
 }

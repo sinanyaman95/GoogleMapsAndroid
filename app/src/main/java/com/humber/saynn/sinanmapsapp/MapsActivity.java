@@ -325,14 +325,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public void onInfoWindowClick(Marker marker) {
-        if(weatherData != null) Toast.makeText(getApplicationContext(),weatherData.getTemperature()+"",Toast.LENGTH_SHORT).show();
+        //if(weatherData != null) Toast.makeText(getApplicationContext(),weatherData.getTemperature()+"",Toast.LENGTH_SHORT).show();
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setMessage(marker.getTitle())
-                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                .setPositiveButton("Show Forecast", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        dialog.dismiss();
+                        double lat = marker.getPosition().latitude;
+                        double lon = marker.getPosition().longitude;
+                        Intent i = new Intent(getApplicationContext(),ShowWeatherWindow.class);
+                        i.putExtra("lat",lat);
+                        i.putExtra("lon",lon);
+                        startActivity(i);
                     }
                 })
                 .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
