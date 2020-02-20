@@ -44,4 +44,14 @@ public class Weather {
     public void setIconURL(String iconURL) {
         this.iconURL = iconURL;
     }
+
+    @Override
+    public String toString() {
+        return "Weather{" +
+                "temperature=" + temperature +
+                ", feelsLike=" + feelsLike +
+                ", description='" + description + '\'' +
+                ", iconURL='" + iconURL + '\'' +
+                '}';
+    }
 }
