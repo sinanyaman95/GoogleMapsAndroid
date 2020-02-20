@@ -195,7 +195,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
         private void setMapListeners(){
-        mMap.setInfoWindowAdapter(new CustomInfoWindow(this));
+        //mMap.setInfoWindowAdapter(new CustomInfoWindow(this));
 
         mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
             @Override
